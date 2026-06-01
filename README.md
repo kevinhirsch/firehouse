@@ -62,9 +62,10 @@ cp .env.example .env       # optional, but recommended for explicit defaults
 docker compose up -d --build
 ```
 Open `http://localhost:7000` when the containers are healthy. Docker Compose
-binds the web UI to `127.0.0.1` by default. If the port is taken, set
-`APP_PORT=7001` in `.env` and recreate the container. Set `APP_BIND=0.0.0.0`
-only when you intentionally want LAN/reverse-proxy access.
+binds the web UI to `0.0.0.0` (all host interfaces) by default, so it is
+reachable across the Docker host's network from the start. If the port is
+taken, set `APP_PORT=7001` in `.env` and recreate the container. Set
+`APP_BIND=127.0.0.1` to restrict the UI back to loopback only.
 
 ### Native Linux / macOS
 ```bash
@@ -100,9 +101,11 @@ It launches at `http://127.0.0.1:7860`. To build a clickable app wrapper:
 <summary>Cookbook, GPU, Ollama, and troubleshooting notes</summary>
 
 **Docker bundled services.** Compose starts Firehouse, ChromaDB, SearXNG, and
-ntfy. Firehouse and the bundled service ports bind to `127.0.0.1` by default, so
-they are reachable from the host but not exposed to your LAN/public internet
-unless you opt in.
+ntfy. The Firehouse web UI binds to `0.0.0.0` by default, so it is reachable
+across the Docker host's network (set `APP_BIND=127.0.0.1` to restrict it to
+loopback). The bundled service ports (ChromaDB, SearXNG, ntfy) stay bound to
+`127.0.0.1`, so they are reachable from the host but not exposed to your
+LAN/public internet unless you opt in.
 
 **Cookbook storage in Docker.** Downloads live in `./data/huggingface`
 (`~/.cache/huggingface` in the container). Cookbook-installed Python CLIs and

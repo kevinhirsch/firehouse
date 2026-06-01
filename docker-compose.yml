@@ -2,7 +2,10 @@ services:
   firehouse:
     build: .
     ports:
-      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-7000}:7000"
+      # Publish on all host interfaces by default so the UI is reachable
+      # across the Docker host's network from the start. Override APP_BIND
+      # (e.g. APP_BIND=127.0.0.1) to restrict it back to loopback only.
+      - "${APP_BIND:-0.0.0.0}:${APP_PORT:-7000}:7000"
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
