@@ -3,8 +3,8 @@
 
 // ── Key constants ──
 export const KEYS = {
-  THEME: 'odysseus-theme',
-  TOGGLES: 'odysseus-toggles',
+  THEME: 'firehouse-theme',
+  TOGGLES: 'firehouse-toggles',
   SIDEBAR_COLLAPSED: 'sidebar-collapsed',
   SIDEBAR_WIDTH: 'sidebar-width',
   SIDEBAR_SIDE: 'sidebar-side',
@@ -13,17 +13,17 @@ export const KEYS = {
   COMPARE_CHAT: 'compare-continue-chat',
   COMPARE_BLIND: 'compare-blind',
   COMPARE_RANDOM: 'compare-randomize',
-  MODELS_EXPANDED: 'odysseus-model-expanded',
-  MODEL_ENDPOINTS: 'odysseus-model-endpoints',
-  MODEL_SELECTED: 'odysseus-selected-model',
-  SORT_ORDER: 'odysseus-sessions-sort',
-  CHAT_SEARCH_SCOPE: 'odysseus-search-scope',
-  INCOGNITO: 'odysseus-incognito',
-  RAG_ACTIVE: 'odysseus-rag-active',
-  MCP_ACTIVE: 'odysseus-mcp-active',
+  MODELS_EXPANDED: 'firehouse-model-expanded',
+  MODEL_ENDPOINTS: 'firehouse-model-endpoints',
+  MODEL_SELECTED: 'firehouse-selected-model',
+  SORT_ORDER: 'firehouse-sessions-sort',
+  CHAT_SEARCH_SCOPE: 'firehouse-search-scope',
+  INCOGNITO: 'firehouse-incognito',
+  RAG_ACTIVE: 'firehouse-rag-active',
+  MCP_ACTIVE: 'firehouse-mcp-active',
   SECTION_ORDER: 'sidebar-section-order',
   ADMIN_LAST_TAB: 'admin-last-tab',
-  DENSITY: 'odysseus-density'
+  DENSITY: 'firehouse-density'
 };
 
 /**
