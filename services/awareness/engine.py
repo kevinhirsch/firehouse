@@ -25,7 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 # Trigger verdicts.
 FIRE = "fire"
@@ -128,3 +128,37 @@ def snapshot_digest(signals: Any) -> str:
 def should_resynthesize(prev_digest: Optional[str], new_digest: str) -> bool:
     """Re-run (expensive) snapshot synthesis only when the inputs changed."""
     return prev_digest != new_digest
+
+
+def decide_tick(
+    triggers: List[Dict[str, Any]],
+    snapshot: Dict[str, Any],
+    now: datetime,
+    sent_in_window: int,
+    rate_limit: int,
+    judge: Optional[Callable[[Dict[str, Any], Dict[str, Any]], bool]] = None,
+) -> List[Dict[str, Any]]:
+    """Pure: decide which triggers should fire this tick.
+
+    Honors enabled/cooldown, evaluates the rule, escalates NEEDS_LLM to
+    ``judge`` (skipped when no judge is supplied), and stops once the per-window
+    rate limit is reached. Returns the trigger dicts to fire, in order.
+    """
+    fires: List[Dict[str, Any]] = []
+    sent = sent_in_window
+    for t in triggers:
+        if not t.get("enabled", True):
+            continue
+        if not cooldown_ok(t.get("last_fired_at"), int(t.get("cooldown_seconds") or 0), now):
+            continue
+        verdict = evaluate_condition(t.get("condition"), snapshot)
+        if verdict == NEEDS_LLM:
+            if judge is None:
+                continue
+            verdict = FIRE if judge(t, snapshot) else SKIP
+        if verdict == FIRE:
+            if not rate_limit_ok(sent, rate_limit):
+                break  # window cap reached — stop firing this tick
+            fires.append(t)
+            sent += 1
+    return fires

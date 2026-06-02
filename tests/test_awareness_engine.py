@@ -95,3 +95,47 @@ def test_should_resynthesize():
     assert e.should_resynthesize(None, "abc") is True
     assert e.should_resynthesize("abc", "abc") is False
     assert e.should_resynthesize("abc", "xyz") is True
+
+
+# ---- decide_tick (pure orchestration) --------------------------------------
+
+_NOW = datetime(2026, 6, 2, 12, 0, 0)
+
+
+def _trig(id, cond, **kw):
+    base = {"id": id, "condition": cond, "enabled": True, "cooldown_seconds": 0,
+            "last_fired_at": None, "name": id}
+    base.update(kw)
+    return base
+
+
+def test_decide_fires_matching_rule_trigger():
+    trigs = [_trig("t1", {"field": "next_event_minutes", "op": "lte", "value": 30})]
+    snap = {"next_event_minutes": 20}
+    fired = e.decide_tick(trigs, snap, _NOW, sent_in_window=0, rate_limit=0)
+    assert [t["id"] for t in fired] == ["t1"]
+
+
+def test_decide_skips_disabled_and_cooled_down():
+    trigs = [
+        _trig("disabled", {"field": "a", "op": "exists"}, enabled=False),
+        _trig("cooling", {"field": "a", "op": "exists"},
+              cooldown_seconds=3600, last_fired_at=_NOW - timedelta(minutes=30)),
+        _trig("ok", {"field": "a", "op": "exists"}),
+    ]
+    fired = e.decide_tick(trigs, {"a": 1}, _NOW, 0, 0)
+    assert [t["id"] for t in fired] == ["ok"]
+
+
+def test_decide_rate_limit_caps_fires():
+    trigs = [_trig(f"t{i}", {"field": "a", "op": "exists"}) for i in range(5)]
+    fired = e.decide_tick(trigs, {"a": 1}, _NOW, sent_in_window=0, rate_limit=2)
+    assert len(fired) == 2
+
+
+def test_decide_needs_llm_skipped_without_judge_used_with_judge():
+    trigs = [_trig("fuzzy", {"fuzzy": "anything urgent?"})]
+    assert e.decide_tick(trigs, {}, _NOW, 0, 0) == []           # no judge -> skip
+    fired = e.decide_tick(trigs, {}, _NOW, 0, 0, judge=lambda t, s: True)
+    assert [t["id"] for t in fired] == ["fuzzy"]
+    assert e.decide_tick(trigs, {}, _NOW, 0, 0, judge=lambda t, s: False) == []

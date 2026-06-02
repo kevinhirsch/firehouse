@@ -14,6 +14,7 @@ from services.awareness.engine import (
     rate_limit_ok,
     snapshot_digest,
     should_resynthesize,
+    decide_tick,
 )
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "rate_limit_ok",
     "snapshot_digest",
     "should_resynthesize",
+    "decide_tick",
 ]
