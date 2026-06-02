@@ -15,7 +15,10 @@ import pytest
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 _SCRIPT = r"""
-import sys
+import os, sys, tempfile
+# Importing core.auth pulls core/__init__ -> session_manager -> database, which
+# runs init_db() at import; point it at a throwaway DB so it doesn't need ./data.
+os.environ["DATABASE_URL"] = "sqlite:///" + tempfile.mkstemp(suffix=".db")[1]
 try:
     from core.auth import DEFAULT_PRIVILEGES, ADMIN_PRIVILEGES
 except ModuleNotFoundError as ex:

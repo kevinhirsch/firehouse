@@ -1,8 +1,9 @@
 """Entity store CRUD + owner isolation (Phase 1).
 
 Runs in an isolated subprocess so the real store + SQLAlchemy models are
-exercised against an in-memory SQLite, immune to the shared session's
-``core.database`` stubbing. Skips when app deps aren't installed.
+exercised against a throwaway temp SQLite DB (importing ``core.database`` runs
+``init_db()`` at import, which needs a writable DB path), immune to the shared
+session's ``core.database`` stubbing. Skips when app deps aren't installed.
 """
 
 import os
@@ -14,20 +15,16 @@ import pytest
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 _SCRIPT = r"""
-import sys
+import os, sys, tempfile
+os.environ["DATABASE_URL"] = "sqlite:///" + tempfile.mkstemp(suffix=".db")[1]
 try:
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-    from core.database import Base
-    import core.proactive_models  # noqa: F401  (register tables)
+    import core.database          # importing runs init_db() -> creates tables (incl. proactive)
+    import core.proactive_models  # noqa: F401
     import src.entity_store as es
 except ModuleNotFoundError as ex:
     print("SKIP", ex); sys.exit(0)
 
-engine = create_engine("sqlite:///:memory:")
-Base.metadata.create_all(bind=engine)
-es.SessionLocal = sessionmaker(bind=engine)
-store = es.EntityStore()
+store = es.EntityStore()  # uses core.database.SessionLocal, bound to the temp DB
 
 # add entity + fact; one positive obs on Beta(1,1) -> 2/3
 e = store.add_entity("alice", "Ryne", type="person")
