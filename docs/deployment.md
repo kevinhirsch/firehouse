@@ -104,6 +104,7 @@ not by the Python app):
 | `CHROMADB_BIND` | `127.0.0.1` | Host bind for the bundled ChromaDB (`:8100`). |
 | `NTFY_BIND` | `127.0.0.1` | Host bind for the bundled ntfy (`:8091`). |
 | `NTFY_BASE_URL` | `http://localhost:8091` | Public base URL for ntfy push links. |
+| `OLLAMA_BIND` | `127.0.0.1` | Host bind for the bundled Ollama service (`:11434`), when the `docker/ollama.yml` overlay is enabled. |
 
 The web UI binds to `0.0.0.0` by default, so it's reachable across the host's
 network from the start. The bundled services (ChromaDB, SearXNG, ntfy) stay on
@@ -139,26 +140,52 @@ before models serve on GPU.
 
 ## Ollama (local models)
 
-When Ollama runs on the Docker host, the container reaches it via
-`host.docker.internal:11434`. The one requirement is that Ollama must listen
-beyond loopback. Easiest path — one command does everything:
+There are three ways to run Ollama with Firehouse, from least to most hands-on.
+
+### Option A — bundled Docker service (no host install, no config)
+
+Run Ollama as a managed Compose service. Firehouse auto-wires to it and you
+manage models entirely from the UI. Add the overlay to `.env`:
 
 ```bash
-sudo ./scripts/firehouse-ollama-setup            # or: sudo ./scripts/firehouse-ollama-setup qwen2.5
+COMPOSE_FILE=docker-compose.yml:docker/ollama.yml
+# with GPU, append a GPU overlay too:
+# COMPOSE_FILE=docker-compose.yml:docker/ollama.yml:docker/gpu.nvidia.yml
 ```
 
-It installs Ollama, sets `OLLAMA_HOST=0.0.0.0:11434` via a systemd drop-in,
-pulls a model, points `.env` at the host endpoint, restarts Firehouse, and
-verifies the container can reach it.
+Then `docker compose up -d`. Ollama joins the compose network; Firehouse reaches
+it at `http://ollama:11434/v1` automatically (no Settings edit needed), and the
+port is published on `127.0.0.1:11434` so host tools can reach it too (override
+with `OLLAMA_BIND`). Models persist in the `ollama-data` volume.
 
-To do it by hand: run Ollama with `OLLAMA_HOST=0.0.0.0:11434`, then add the
-endpoint `http://host.docker.internal:11434/v1` in **Settings**.
+### Option B — host install, one command
 
-### Managing local models
+If you'd rather run Ollama on the host (e.g. to use the host GPU directly):
 
-Once Ollama is set up, manage models with the Firehouse-aware wrapper — it
-targets the same Ollama your `.env` points at, and pulled models appear in the
-Firehouse model picker automatically:
+```bash
+sudo ./scripts/firehouse-ollama-setup            # or: ... qwen2.5
+```
+
+It installs Ollama, sets `OLLAMA_HOST=0.0.0.0:11434` via a systemd drop-in so the
+container can reach it, pulls a model, points `.env` at the host endpoint,
+restarts Firehouse, and verifies connectivity.
+
+### Option C — fully manual
+
+Run Ollama with `OLLAMA_HOST=0.0.0.0:11434`, then add the endpoint
+`http://host.docker.internal:11434/v1` under **Settings → model endpoints**
+(or click the **Ollama** / **Scan for Servers** buttons there to auto-fill it).
+
+### Managing local models — in the UI
+
+Once Ollama is reachable, open **Settings → model endpoints → Local models** to
+install, list, and remove models point-and-click (pull progress streams live).
+Models you install appear in the chat model picker automatically.
+
+### Managing local models — CLI (optional)
+
+The same operations are scriptable. The wrapper targets the same Ollama your
+`.env` points at:
 
 ```bash
 ./scripts/firehouse-models list            # installed models

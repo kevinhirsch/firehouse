@@ -364,6 +364,9 @@ async function _selectAddedModelInChat(endpoint) {
 }
 
 async function loadEndpoints() {
+  // Lazily render the in-UI Ollama local-model manager (admin-only; hides
+  // itself if unavailable). Isolated so a failure can't break this panel.
+  import('./ollamaModels.js').then(m => m.initOllamaModels && m.initOllamaModels()).catch(() => {});
   const listLocal = el('adm-epList-local');
   const listApi = el('adm-epList-api');
   // Fallback to the legacy single list if the split containers don't exist

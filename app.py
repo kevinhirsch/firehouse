@@ -552,6 +552,10 @@ app.include_router(setup_embedding_routes())
 from routes.model_routes import setup_model_routes
 app.include_router(setup_model_routes(model_discovery))
 
+# Ollama local-model management (install/list/remove via the UI)
+from routes.ollama_routes import setup_ollama_routes
+app.include_router(setup_ollama_routes())
+
 # TTS
 from routes.tts_routes import setup_tts_routes
 app.include_router(setup_tts_routes(tts_service))
