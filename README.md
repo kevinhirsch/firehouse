@@ -54,6 +54,13 @@ Use that for the first login, then change it in **Settings**.
 Contributing? See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, testing, and
 pull request guidelines.
 
+> 📚 **Full documentation lives in [`docs/`](docs/README.md)** —
+> [Architecture](docs/architecture.md) ·
+> [Configuration](docs/configuration.md) ·
+> [Deployment](docs/deployment.md) ·
+> [API Reference](docs/api.md) ·
+> [Troubleshooting](docs/troubleshooting.md).
+
 ### Docker (recommended)
 ```bash
 git clone https://github.com/kevinhirsch/firehouse.git
@@ -66,6 +73,16 @@ binds the web UI to `0.0.0.0` (all host interfaces) by default, so it is
 reachable across the Docker host's network from the start. If the port is
 taken, set `APP_PORT=7001` in `.env` and recreate the container. Set
 `APP_BIND=127.0.0.1` to restrict the UI back to loopback only.
+
+#### Updating
+To pull the newest version from GitHub and restart:
+```bash
+./scripts/firehouse-update            # backup data, pull code + images, rebuild & restart
+```
+It snapshots `data/` first, pulls the latest code and service images, then
+rebuilds and recreates the containers. Your `data/` and `.env` are left in
+place and the app runs its schema migrations automatically on startup. Pass
+`--no-backup` to skip the snapshot.
 
 ### Native Linux / macOS
 ```bash
@@ -100,66 +117,10 @@ It launches at `http://127.0.0.1:7860`. To build a clickable app wrapper:
 <details>
 <summary>Cookbook, GPU, Ollama, and troubleshooting notes</summary>
 
-**Docker bundled services.** Compose starts Firehouse, ChromaDB, SearXNG, and
-ntfy. The Firehouse web UI binds to `0.0.0.0` by default, so it is reachable
-across the Docker host's network (set `APP_BIND=127.0.0.1` to restrict it to
-loopback). The bundled service ports (ChromaDB, SearXNG, ntfy) stay bound to
-`127.0.0.1`, so they are reachable from the host but not exposed to your
-LAN/public internet unless you opt in.
+These topics now have dedicated guides:
 
-**Cookbook storage in Docker.** Downloads live in `./data/huggingface`
-(`~/.cache/huggingface` in the container). Cookbook-installed Python CLIs and
-serve engines live in `./data/local` (`~/.local` in the container), so they
-survive container recreation.
-
-**Remote servers.** In **Cookbook -> Settings -> Servers**, generate the
-Firehouse SSH key and add the public key to the remote server's
-`~/.ssh/authorized_keys`. From the host you can also run:
-
-```bash
-ssh-copy-id -i data/ssh/id_ed25519.pub user@server
-```
-
-**NVIDIA / AMD Docker GPU overlays.** Install the host runtime first, then add
-one of these to `.env`:
-
-```bash
-COMPOSE_FILE=docker-compose.yml:docker/gpu.nvidia.yml
-COMPOSE_FILE=docker-compose.yml:docker/gpu.amd.yml
-```
-
-Verify with:
-
-```bash
-docker compose exec firehouse nvidia-smi -L
-docker compose exec firehouse rocm-smi
-```
-
-**Ollama with Docker.** If Ollama runs on the host, add this endpoint in
-Settings:
-
-```text
-http://host.docker.internal:11434/v1
-```
-
-Ollama must listen outside its own loopback interface:
-
-```bash
-OLLAMA_HOST=0.0.0.0:11434 ollama serve
-```
-
-**Useful checks.**
-
-```bash
-docker compose ps
-docker compose logs --tail=120 firehouse
-docker compose logs firehouse | grep -E 'ChromaDB|MemoryVectorStore|DEGRADED'
-```
-
-**macOS details.** `start-macos.sh` installs Homebrew deps, creates the venv,
-runs setup, and starts uvicorn on port `7860` because AirPlay often holds
-`7000`. It uses llama.cpp/Ollama for Metal. vLLM/SGLang are CUDA/ROCm-only and
-do not run on macOS. MLX-only models are not served by Firehouse.
+- **Docker services, GPU overlays, Ollama, updating, backups, HTTPS** — [Deployment](docs/deployment.md).
+- **Refused connections, port conflicts, ChromaDB, Ollama, and more** — [Troubleshooting](docs/troubleshooting.md).
 
 </details>
 
@@ -198,30 +159,21 @@ Open `http://localhost:7000`, log in with the generated admin password,
 and configure everything else inside **Settings**.
 
 ## Security Notes
-Firehouse is a self-hosted workspace with powerful local tools: shell access, file uploads, model downloads, web research, email/calendar integrations, and API tokens. Treat it like an admin console.
+Firehouse is a self-hosted workspace with powerful local tools (shell, uploads,
+model downloads, web research, email/calendar, API tokens) — treat it like an
+admin console. The essentials:
 
-- Keep `AUTH_ENABLED=true` for any network-accessible deployment.
-- Do not expose it directly to the public internet without HTTPS and a trusted reverse proxy.
-- Keep `data/`, `.env`, logs, databases, and uploaded/generated media out of Git. They are ignored by default.
-- Review `data/auth.json` after first boot: disable open signup unless you intentionally want it, make only your own account admin, and keep demo/test accounts non-admin.
-- Non-admin users do not get shell/Python/file read/write by default, and admin-only routes/tools such as MCP management, API tokens, webhooks, model/cookbook serving, backup/vault, and app settings are admin-gated. Other features are controlled by per-user privileges, so review each user's privileges before exposing a deployment.
-- Rotate any API keys or tokens that were ever pasted into a shared chat, demo, screenshot, or log.
-- If you enable API tokens or webhooks, create separate tokens per integration and delete unused ones.
-- Prefer binding manual development runs to `127.0.0.1`; bind to `0.0.0.0` only when you intentionally want LAN/reverse-proxy access.
-- Before publishing a fork, run `git status --short` and confirm no private files from `.env`, `data/`, `logs/`, uploads, backups, or local databases are staged.
+- Keep `AUTH_ENABLED=true` for any network-accessible deployment, and put it
+  behind HTTPS + a trusted reverse proxy before exposing it.
+- Keep `data/`, `.env`, logs, databases, and uploaded/generated media out of Git
+  (ignored by default).
+- After first boot, review `data/auth.json`: disable open signup unless wanted,
+  keep only your account admin, and keep demo/test users non-admin.
+- Rotate any keys/tokens that appeared in a shared chat, demo, screenshot, or log.
 
-### Putting it behind HTTPS
-Firehouse serves plain HTTP on its port. That's fine for `localhost` and trusted LAN/VPN use, but browsers will warn ("Password fields present on an insecure page") and the login + API tokens travel in cleartext. For anything reachable outside your machine — including a Tailscale IP shared with other devices — put a TLS-terminating reverse proxy in front.
-
-Shortest path with [Caddy](https://caddyserver.com/) (auto-renews Let's Encrypt certs):
-
-```caddy
-firehouse.example.com {
-  reverse_proxy localhost:7000
-}
-```
-
-For a LAN-only Tailscale deployment, Caddy + [tailscale-cert](https://caddyserver.com/docs/caddyfile/options#auto-https) or the built-in MagicDNS HTTPS feature both work. nginx/Traefik configs are similar — proxy `localhost:7000`, terminate TLS at the proxy. Once that's in place, the browser warning goes away and your login is encrypted.
+See the [Security policy](SECURITY.md) for the full checklist and
+[Deployment → HTTPS](docs/deployment.md#putting-it-behind-https) for the
+reverse-proxy setup.
 
 ## Contributing
 Help is welcome. The best entry points are fresh-install testing, provider setup
@@ -229,52 +181,31 @@ bugs, mobile/editor polish, docs, and small focused refactors. See
 [ROADMAP.md](ROADMAP.md) for the current help-wanted list.
 
 ## Configuration
-Most setup is done inside the app with `/setup` or **Settings**. Use `.env`
-for deployment-level defaults and secrets you want present before first boot.
-Key settings:
+Most setup happens inside the app via `/setup` or **Settings**. Use `.env` only
+for deployment-level defaults and secrets you want present before first boot —
+bind address, port, auth toggles, the database URL, or a pre-seeded admin
+password. The most common settings:
 
 | Variable | Default | Description |
 |---|---|---|
-| `LLM_HOST` | `localhost` | Your LLM server (e.g. `llm-host.local:8000`) |
-| `LLM_HOSTS` | -- | Comma-separated list for model discovery |
-| `OPENAI_API_KEY` | -- | Optional OpenAI key. Prefer adding providers in the app unless pre-seeding. |
-| `SEARXNG_INSTANCE` | `http://localhost:8080` | SearXNG URL. Docker overrides this to `http://searxng:8080`. |
-| `SEARXNG_SECRET` | generated on first Docker boot | Optional SearXNG cookie/CSRF secret. Leave blank unless you need to pin it. |
-| `APP_BIND` | `127.0.0.1` | Docker Compose host bind address for the web UI. Use `0.0.0.0` only for intentional LAN/reverse-proxy access. |
-| `APP_PORT` | `7000` | Docker Compose host port for the web UI. |
-| `AUTH_ENABLED` | `true` | Enable/disable login |
-| `LOCALHOST_BYPASS` | `false` | Development-only auth bypass for loopback requests. Keep false for shared/network deployments. |
-| `DATABASE_URL` | `sqlite:///./data/app.db` | Database connection string |
-| `CHROMADB_HOST` | `localhost` | ChromaDB host for vector memory. Docker overrides this to `chromadb`. |
-| `CHROMADB_PORT` | `8100` | ChromaDB port for manual host runs. Docker overrides this to `8000`. |
-| `EMBEDDING_URL` | -- | OpenAI-compatible embeddings endpoint |
+| `APP_BIND` | `0.0.0.0` | Docker host bind for the web UI. Set `127.0.0.1` for loopback only. |
+| `APP_PORT` | `7000` | Docker host port for the web UI. |
+| `AUTH_ENABLED` | `true` | Enable/disable login. |
+| `DATABASE_URL` | `sqlite:///./data/app.db` | Database connection string. |
+| `OPENAI_API_KEY` | — | Optional; prefer adding providers in the app. |
 
-### Built-in MCP servers (optional setup)
-
-Firehouse auto-registers a few built-in MCP servers at startup. The npx-based ones (currently the browser server, `@playwright/mcp`) only start when their npm package is already in the local npx cache. If a package isn't cached, that server is skipped with a startup log message explaining what to do, so a fresh install does not block on a multi-minute npm download or hang if Playwright system deps are missing.
-
-To enable the browser MCP (page navigation, screenshots, vision), run once:
-
-```bash
-npx -y @playwright/mcp@latest --version
-```
-
-That installs `@playwright/mcp` plus Playwright (~300MB total). Restart Firehouse and the server will register at startup.
+The complete environment-variable reference — every LLM, search, email,
+ChromaDB, auth, and scheduling setting — is in
+[Configuration](docs/configuration.md).
 
 ## Architecture
-```
-app.py                   # FastAPI entry point
-core/      auth, database, middleware, constants
-src/       llm_core, agent_loop, agent_tools, chat_processor, search/
-routes/    chat, session, document, memory, model … endpoints
-services/  docs, memory, search, hwfit (Cookbook) …
-static/    index.html + app.js + style.css + js/ (modular front-end)
-docs/      landing page (index.html) + preview clips
-```
+Firehouse is a FastAPI app: a static SPA front end over a JSON/SSE API, with
+business logic in `src/` and `services/`, infrastructure in `core/`, and
+persistence in SQLite plus the `data/` directory (and optional ChromaDB for
+semantic memory and search). All user data lives in `data/` (gitignored).
 
-## Data
-All user data lives in `data/` (gitignored): `app.db` (sessions, messages, documents),
-`memory.json`, `presets.json`, `uploads/`, `personal_docs/`, `chroma/`, `settings.json`.
+See [Architecture](docs/architecture.md) for the full breakdown — layout,
+request flow, subsystems, storage, background work, and the auth model.
 
 ## Star History
 
