@@ -1348,6 +1348,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (target === 'skills') {
         import('./skills.js').then(m => { if (m.loadSkills) m.loadSkills(true); else if (m.default?.loadSkills) m.default.loadSkills(true); });
       }
+      // Lazy-load entity inspector
+      if (target === 'entities') {
+        import('./entities.js').then(m => { const fn = m.initEntities || m.default?.initEntities; if (fn) fn(); });
+      }
     });
   });
 

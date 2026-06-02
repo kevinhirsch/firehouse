@@ -23,6 +23,8 @@ import galleryModule from './js/gallery.js';
 import tasksModule from './js/tasks.js';
 import calendarModule from './js/calendar.js';
 import notesModule from './js/notes.js';
+import awarenessModule from './js/awareness.js';
+import haModule from './js/homeassistant.js';
 import adminModule from './js/admin.js';
 import settingsModule from './js/settings.js';
 // Eagerly bind unified minimize/restore behavior across all tool modals.
@@ -872,6 +874,36 @@ function initializeEventListeners() {
       }
     });
   }
+
+  // Awareness tool button + close
+  const toolAwarenessBtn = el('tool-awareness-btn');
+  if (toolAwarenessBtn) {
+    toolAwarenessBtn.addEventListener('click', () => {
+      if (awarenessModule) awarenessModule.openPanel();
+    });
+  }
+  const closeAwarenessBtn = el('close-awareness-modal');
+  if (closeAwarenessBtn) {
+    closeAwarenessBtn.addEventListener('click', () => {
+      const m = el('awareness-modal');
+      if (m) dismissModal(m);
+    });
+  }
+
+  // Home Assistant tool button + close
+  const toolHaBtn = el('tool-homeassistant-btn');
+  if (toolHaBtn) {
+    toolHaBtn.addEventListener('click', () => {
+      if (haModule) haModule.openPanel();
+    });
+  }
+  const closeHaBtn = el('close-homeassistant-modal');
+  if (closeHaBtn) {
+    closeHaBtn.addEventListener('click', () => {
+      const m = el('homeassistant-modal');
+      if (m) dismissModal(m);
+    });
+  }
   // Refresh notes due-reminder badge on load and every 5 minutes
   if (notesModule && notesModule.refreshDueBadge) {
     notesModule.refreshDueBadge();
@@ -998,6 +1030,8 @@ function initializeEventListeners() {
       setTimeout(_goFullscreen, 200);
     },
     '/memory':   () => document.getElementById('tool-memory-btn')?.click(),
+    '/awareness': () => document.getElementById('tool-awareness-btn')?.click(),
+    '/homeassistant': () => document.getElementById('tool-homeassistant-btn')?.click(),
     '/gallery':  () => document.getElementById('tool-gallery-btn')?.click(),
     '/tasks':    () => document.getElementById('tool-tasks-btn')?.click(),
     '/library':  () => sessionModule && sessionModule.openLibrary && sessionModule.openLibrary(),
