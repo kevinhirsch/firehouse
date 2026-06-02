@@ -224,13 +224,20 @@ def _render_body(trigger: Dict[str, Any], snapshot: Dict[str, Any]) -> str:
 def collect_signals(owner: Optional[str]) -> Dict[str, Any]:
     """Best-effort signal snapshot fed to trigger conditions.
 
-    Empty in this increment — the loop machinery (CRUD, tick, notification
-    records, outcomes) ships here; the real collectors (calendar lookahead /
-    availability, unread-email count, due reminders) land in Phase 3 and just
-    populate this dict. Until then, rule triggers that reference signal fields
-    simply don't fire, which is the safe default for an opt-in feature.
-
-    Replace/extend by registering source functions that each return a partial
-    dict and are individually guarded by the caller.
+    Each source is guarded so a failure in one never blocks the others. Phase 3
+    adds the calendar source (next-event timing, today's/next-24h counts);
+    further sources (unread email, due reminders) can be appended the same way.
     """
-    return {}
+    now = datetime.utcnow()
+    snap: Dict[str, Any] = {}
+
+    # Calendar: derive next-event timing + counts from upcoming events.
+    try:
+        from core.database import get_upcoming_events
+        from services.awareness import calendar_intel
+        events = get_upcoming_events(owner, horizon_days=2, limit=40) or []
+        snap.update(calendar_intel.build_snapshot(events, now))
+    except Exception as ex:
+        logger.debug("awareness calendar collector skipped: %s", ex)
+
+    return snap
