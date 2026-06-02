@@ -67,6 +67,16 @@ reachable across the Docker host's network from the start. If the port is
 taken, set `APP_PORT=7001` in `.env` and recreate the container. Set
 `APP_BIND=127.0.0.1` to restrict the UI back to loopback only.
 
+#### Updating
+To pull the newest version from GitHub and restart:
+```bash
+./scripts/firehouse-update            # backup data, pull code + images, rebuild & restart
+```
+It snapshots `data/` first, pulls the latest code and service images, then
+rebuilds and recreates the containers. Your `data/` and `.env` are left in
+place and the app runs its schema migrations automatically on startup. Pass
+`--no-backup` to skip the snapshot.
+
 ### Native Linux / macOS
 ```bash
 git clone https://github.com/kevinhirsch/firehouse.git
