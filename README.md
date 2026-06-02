@@ -145,17 +145,19 @@ docker compose exec firehouse nvidia-smi -L
 docker compose exec firehouse rocm-smi
 ```
 
-**Ollama with Docker.** If Ollama runs on the host, add this endpoint in
+**Ollama with Docker.** One command installs Ollama on the host, exposes it to
+the container, pulls a model, and wires it into Firehouse:
+
+```bash
+sudo ./scripts/firehouse-ollama-setup            # or: sudo ./scripts/firehouse-ollama-setup qwen2.5
+```
+
+To wire it up by hand instead: Ollama must listen outside its own loopback
+interface (`OLLAMA_HOST=0.0.0.0:11434 ollama serve`), then add this endpoint in
 Settings:
 
 ```text
 http://host.docker.internal:11434/v1
-```
-
-Ollama must listen outside its own loopback interface:
-
-```bash
-OLLAMA_HOST=0.0.0.0:11434 ollama serve
 ```
 
 **Useful checks.**
