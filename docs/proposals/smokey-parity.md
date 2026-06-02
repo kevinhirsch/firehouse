@@ -213,3 +213,29 @@ Ordered by dependency and risk. Each phase is independently shippable (small, fo
 ## Non-goals
 - No microservices split, NATS, Qdrant, or separate observability stack — Firehouse stays a monolith with ChromaDB + SQLite.
 - No change to existing chat/agent/memory behavior for users who don't opt in.
+
+## Implementation status & operating flags
+
+Backend shipped across Phases 0–5 (all opt-in; `main` unaffected until enabled):
+
+| Phase | What | How to turn on |
+|---|---|---|
+| 0 | Schema, privileges, risk-policy skeleton | — (inert) |
+| 1 | Entity + relationship store (`/api/entities`) | privilege `can_manage_memory` |
+| 2 | Awareness loop (triggers, ticks, notifications, outcomes) | `FIREHOUSE_AWARENESS=1` + privilege `can_use_awareness` + ≥1 enabled trigger |
+| 3 | Calendar signals feeding the snapshot | (part of awareness) |
+| 4 | Home Assistant control (`/api/homeassistant/*`) | privilege `can_control_home` + configured/enabled HA + allowlist |
+| 5 | Outcome-driven trigger auto-pause | (part of awareness) |
+
+**Environment flags**
+- `FIREHOUSE_AWARENESS` (default off) — runs the background awareness tick loop.
+- `FIREHOUSE_RISK_POLICY` (default off) — enforces HIGH-risk confirmation (e.g. `ha_call_service` needs `confirm=true`).
+
+**Settings keys**
+- `awareness_interval_seconds` (default 900) — tick cadence.
+- `awareness_daily_notification_limit` (default 0 = unlimited) — per-user/day cap.
+- `reminder_channel` (existing) — also used for awareness notifications (ntfy/browser/email).
+
+**Privileges (default off):** `can_use_awareness`, `can_control_home`.
+
+**Still open (front-end + enhancements):** the vanilla-JS UI panels (awareness triggers + notification feed, entity inspector in the Brain modal, Home Assistant settings), the optional `homeassistant` MCP server + HA WebSocket state stream, LLM snapshot synthesis + fuzzy-trigger judge, and the optional memory→entity backfill. These were intentionally not built blind — they need a session that can run the app to verify behavior.

@@ -16,7 +16,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from core.database import SessionLocal
 from core.proactive_models import AwarenessTrigger, AwarenessNotification
-from services.awareness.engine import decide_tick
+from services.awareness.engine import decide_tick, update_belief, is_noisy
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +126,12 @@ class AwarenessService:
             db.close()
 
     def record_outcome(self, owner: Optional[str], notif_id: str, outcome: str) -> bool:
+        """Record a notification outcome and fold it into the trigger's belief.
+
+        ``useful``/``acted`` reinforce the trigger; ``dismissed`` erodes it.
+        Once a trigger is persistently ignored (``is_noisy``) it auto-pauses, so
+        proactivity self-corrects instead of nagging.
+        """
         db = SessionLocal()
         try:
             n = _owned(db.query(AwarenessNotification).filter(AwarenessNotification.id == notif_id),
@@ -133,6 +139,14 @@ class AwarenessService:
             if not n:
                 return False
             n.outcome = outcome
+            trig = None
+            if n.trigger_id:
+                trig = db.query(AwarenessTrigger).filter(AwarenessTrigger.id == n.trigger_id).first()
+            if trig is not None:
+                trig.alpha, trig.beta = update_belief(trig.alpha, trig.beta, outcome)
+                if is_noisy(trig.alpha, trig.beta):
+                    trig.enabled = False
+                    logger.info("Auto-paused noisy awareness trigger %s (usefulness too low)", trig.id)
             db.commit()
             return True
         finally:
