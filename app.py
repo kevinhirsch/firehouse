@@ -503,6 +503,8 @@ from routes.memory_routes import setup_memory_routes
 app.include_router(setup_memory_routes(memory_manager, session_manager, memory_vector=memory_vector))
 from routes.entity_routes import setup_entity_routes
 app.include_router(setup_entity_routes())
+from routes.awareness_routes import setup_awareness_routes
+app.include_router(setup_awareness_routes())
 from routes.skills_routes import setup_skills_routes
 app.include_router(setup_skills_routes(skills_manager))
 
@@ -987,6 +989,53 @@ async def startup_event():
                 logger.warning(f"Nightly skill audit failed: {e}")
 
     _startup_tasks.append(asyncio.create_task(_skill_audit_nightly_loop()))
+
+    # Proactive awareness loop — OFF by default. Enable with FIREHOUSE_AWARENESS=1.
+    # Every `awareness_interval_seconds` (default 900 = 15 min) it runs one tick
+    # per owner who has the can_use_awareness privilege AND >=1 enabled trigger.
+    # Change-detection + cooldowns keep idle ticks cheap (services/awareness).
+    _awareness_on = os.environ.get("FIREHOUSE_AWARENESS", "0").strip().lower()
+    if _awareness_on in ("1", "true", "yes", "on"):
+        async def _awareness_loop():
+            from services.awareness.service import AwarenessService
+            from core.proactive_models import AwarenessTrigger
+            from core.database import SessionLocal
+            svc = AwarenessService()
+
+            def _owners_with_triggers():
+                db = SessionLocal()
+                try:
+                    rows = (db.query(AwarenessTrigger.owner)
+                            .filter(AwarenessTrigger.enabled.is_(True)).distinct().all())
+                    return [r[0] for r in rows]
+                finally:
+                    db.close()
+
+            while True:
+                try:
+                    from src.settings import get_setting
+                    interval = int(get_setting("awareness_interval_seconds", 900) or 900)
+                    limit = int(get_setting("awareness_daily_notification_limit", 0) or 0)
+                except Exception:
+                    interval, limit = 900, 0
+                await asyncio.sleep(max(60, interval))
+                try:
+                    owners = await asyncio.to_thread(_owners_with_triggers)
+                    for owner in owners:
+                        try:
+                            if owner:
+                                privs = auth_manager.get_privileges(owner)
+                                if not privs.get("can_use_awareness"):
+                                    continue
+                            await svc.run_tick(owner, daily_limit=limit)
+                        except Exception as e:
+                            logger.debug(f"Awareness tick failed for {owner}: {e}")
+                except Exception as e:
+                    logger.warning(f"Awareness loop cycle failed: {e}")
+
+        _startup_tasks.append(asyncio.create_task(_awareness_loop()))
+        logger.info("Proactive awareness loop enabled (FIREHOUSE_AWARENESS=1)")
+
     logger.info("Application startup complete")
 
 @app.on_event("shutdown")
