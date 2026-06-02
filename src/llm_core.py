@@ -1,4 +1,5 @@
 # src/llm_core.py
+import os
 import httpx
 import asyncio
 import time
@@ -12,14 +13,28 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
+def _env_int(name: str, default: int) -> int:
+    """Read a positive int from the environment, falling back on default."""
+    try:
+        val = int(os.getenv(name, "").strip())
+        return val if val > 0 else default
+    except (TypeError, ValueError):
+        return default
+
+
 class LLMConfig:
-    """Configuration constants for LLM operations."""
-    DEFAULT_TIMEOUT = 30
+    """Configuration constants for LLM operations.
+
+    Timeouts are overridable via env (in seconds) for slow local models:
+      LLM_TIMEOUT        — non-streaming request read timeout (default 30)
+      LLM_STREAM_TIMEOUT — streaming request read timeout (default 300)
+    """
+    DEFAULT_TIMEOUT = _env_int("LLM_TIMEOUT", 30)
     DEFAULT_TEMPERATURE = 1.0
     DEFAULT_MAX_TOKENS = 0
     MAX_RETRIES = 3
     RETRY_DELAY = 0.5
-    STREAM_TIMEOUT = 300
+    STREAM_TIMEOUT = _env_int("LLM_STREAM_TIMEOUT", 300)
 
 
 # Cache for LLM responses
