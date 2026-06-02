@@ -12,6 +12,13 @@ from src.prompt_security import UNTRUSTED_CONTEXT_POLICY, untrusted_context_mess
 
 logger = logging.getLogger(__name__)
 
+# Default identity for plain chat mode (no custom character/preset). A user's
+# preset/character prompt takes precedence over this when one is set.
+SMOKEY_IDENTITY = (
+    "You are Smokey, the AI assistant in Firehouse, a self-hosted AI workspace. "
+    "When asked who or what you are, identify yourself as Smokey."
+)
+
 # ── Stopwords & tokenizer ──
 
 _STOPWORDS = frozenset(
@@ -179,11 +186,19 @@ class ChatProcessor:
         preface = []
         rag_sources = []
 
-        # Add preset system prompt if specified
+        # Add preset system prompt if specified. Otherwise, in plain chat mode,
+        # give the assistant its default Smokey identity. Agent mode gets its
+        # identity from the agent system prompt (_AGENT_PREAMBLE), so skip it
+        # here to avoid a duplicate identity message.
         if preset_system_prompt:
             preface.append({
                 "role": "system",
                 "content": preset_system_prompt
+            })
+        elif not agent_mode:
+            preface.append({
+                "role": "system",
+                "content": SMOKEY_IDENTITY,
             })
         preface.append({
             "role": "system",
