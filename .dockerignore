@@ -10,6 +10,7 @@ dist/
 build/
 .env
 /data/
+/backups/
 /logs/
 .git/
 .claude/
