@@ -24,7 +24,7 @@ from sqlalchemy import (
     Index,
 )
 
-from core.database import Base, TimestampMixin
+from core.database import Base, TimestampMixin, EncryptedText
 
 
 # ---------------------------------------------------------------------------
@@ -154,3 +154,25 @@ class AwarenessNotification(TimestampMixin, Base):
     __table_args__ = (
         Index("ix_awareness_notif_owner_created", "owner", "created_at"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Home Assistant integration (Phase 4)
+# ---------------------------------------------------------------------------
+
+class HomeAssistantConfig(TimestampMixin, Base):
+    """Per-owner Home Assistant connection + allowlist.
+
+    The long-lived access token is Fernet-encrypted at rest (EncryptedText).
+    ``allowlist`` is the set of entity ids / domains the agent may touch — there
+    is no blanket control; an empty allowlist means nothing is controllable.
+    """
+    __tablename__ = "homeassistant_config"
+
+    id        = Column(String, primary_key=True, index=True)
+    owner     = Column(String, nullable=True, index=True, unique=True)  # one config per user
+    base_url  = Column(String, nullable=True)            # e.g. http://homeassistant.local:8123
+    token     = Column(EncryptedText, nullable=True)     # long-lived access token (encrypted)
+    enabled   = Column(Boolean, nullable=False, default=False)
+    allowlist = Column(JSON, nullable=True)              # list[str] of entity_ids / "domain.*"
+

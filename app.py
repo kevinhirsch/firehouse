@@ -505,6 +505,8 @@ from routes.entity_routes import setup_entity_routes
 app.include_router(setup_entity_routes())
 from routes.awareness_routes import setup_awareness_routes
 app.include_router(setup_awareness_routes())
+from routes.homeassistant_routes import setup_homeassistant_routes
+app.include_router(setup_homeassistant_routes())
 from routes.skills_routes import setup_skills_routes
 app.include_router(setup_skills_routes(skills_manager))
 
