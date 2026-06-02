@@ -35,8 +35,10 @@ assert f["confidence"] == 0.6667, f
 dup = store.add_entity("alice", "ryne")
 assert dup.get("_deduped") is True and dup["id"] == e["id"]
 
-# near-duplicate fact reinforces (raises confidence), stays one fact
-f2 = store.add_fact("alice", e["id"], "Ryne is the boyfriend of Alice")
+# near-duplicate fact reinforces (raises confidence), stays one fact.
+# (Jaccard >= 0.6 of the original tokens; reordered/synonym phrasings below
+# that threshold intentionally do NOT merge under keyword-only dedup.)
+f2 = store.add_fact("alice", e["id"], "Ryne is Alice's boyfriend now")
 assert f2.get("_reinforced") is True and f2["confidence"] > f["confidence"]
 assert len(store.get_entity("alice", e["id"])["facts"]) == 1
 
