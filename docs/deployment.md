@@ -154,6 +154,21 @@ verifies the container can reach it.
 To do it by hand: run Ollama with `OLLAMA_HOST=0.0.0.0:11434`, then add the
 endpoint `http://host.docker.internal:11434/v1` in **Settings**.
 
+### Managing local models
+
+Once Ollama is set up, manage models with the Firehouse-aware wrapper — it
+targets the same Ollama your `.env` points at, and pulled models appear in the
+Firehouse model picker automatically:
+
+```bash
+./scripts/firehouse-models list            # installed models
+./scripts/firehouse-models pull qwen2.5    # install / update a model
+./scripts/firehouse-models running         # models loaded in memory
+./scripts/firehouse-models remove llama3.1 # uninstall
+./scripts/firehouse-models info llama3.1   # model details
+./scripts/firehouse-models endpoint        # show which Ollama it targets
+```
+
 ## Updating
 
 ```bash
