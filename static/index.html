@@ -492,6 +492,46 @@
     </div>
   </div>
 
+  <!-- Home Assistant settings modal -->
+  <div id="homeassistant-modal" class="modal hidden">
+    <div class="modal-content" style="background:var(--bg);max-width:560px;width:92vw">
+      <div class="modal-header">
+        <h4>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px;opacity:0.7"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg>Home Assistant
+        </h4>
+        <button class="close-btn" id="close-homeassistant-modal" aria-label="Close">✖</button>
+      </div>
+      <div class="modal-body" style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:11px;opacity:0.6;display:block;margin-bottom:3px">Base URL</label>
+          <input type="text" id="ha-base-url" placeholder="http://homeassistant.local:8123" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;opacity:0.6;display:block;margin-bottom:3px">Long-lived access token</label>
+          <input type="password" id="ha-token" placeholder="Long-lived access token" style="width:100%" autocomplete="off">
+        </div>
+        <div>
+          <label style="font-size:11px;opacity:0.6;display:block;margin-bottom:3px">Entity allowlist (one per line — <code>light.kitchen</code>, <code>light</code>, <code>light.*</code>)</label>
+          <textarea id="ha-allowlist" rows="3" placeholder="light&#10;alarm_control_panel.home" style="width:100%;font-family:var(--font-mono,monospace);font-size:12px"></textarea>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="ha-enabled"> Enabled
+        </label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button id="ha-save-btn" class="primary-btn">Save</button>
+          <span id="ha-status" style="font-size:12px;opacity:0.6"></span>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:10px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <strong style="font-size:12px">Allowlisted entities</strong>
+            <button id="ha-refresh-states-btn" class="icon-btn" style="font-size:12px">Refresh</button>
+          </div>
+          <div id="ha-states"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Theme Popup (floating panel) -->
   <div id="theme-modal" class="modal hidden">
   <div id="theme-popup" class="modal-content admin-modal-content" style="background:var(--bg)">
@@ -967,6 +1007,16 @@
           </svg>
           <span class="grow">Awareness</span>
           <span id="awareness-notif-dot" class="sidebar-notif-dot" style="display:none"></span>
+        </div>
+        <div class="list-item" id="tool-homeassistant-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            style="flex-shrink:0;opacity:0.5;">
+            <path d="M3 11.5 12 4l9 7.5"/>
+            <path d="M5 10v10h14V10"/>
+            <path d="M10 20v-5h4v5"/>
+          </svg>
+          <span class="grow">Home Assistant</span>
         </div>
 
         <div class="list-item" id="tool-theme-btn">

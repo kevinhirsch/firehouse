@@ -179,6 +179,11 @@ export function handleUIControl(uiData) {
           var fn = mod.openPanel || (mod.default && mod.default.openPanel);
           if (fn) fn();
         }).catch(function(){});
+      } else if (panel === 'homeassistant' || panel === 'home') {
+        import('./homeassistant.js').then(function(mod) {
+          var fn = mod.openPanel || (mod.default && mod.default.openPanel);
+          if (fn) fn();
+        }).catch(function(){});
       } else if (panel === 'memories' || panel === 'skills' || panel === 'settings') {
         // These live in the sidebar / settings drawer — most just need
         // an existing button click.
