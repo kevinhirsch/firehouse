@@ -1,4 +1,28 @@
-from src.action_intents import message_needs_tools
+from src.action_intents import message_needs_tools, auto_escalation_disabled_tools
+
+
+# --- shell-access regression (transcript bug) -------------------------------
+
+def test_transcript_messages_auto_escalate():
+    # Both messages from the bug report match the tool-intent patterns.
+    assert message_needs_tools("can you run shell?")
+    assert message_needs_tools("Can you see what environment you're running in?")
+
+
+def test_auto_escalation_withholds_shell_by_default():
+    disabled = auto_escalation_disabled_tools(allow_bash=False)
+    assert {"bash", "python", "read_file", "write_file", "builtin_browser"} <= disabled
+
+
+def test_auto_escalation_respects_explicit_shell_toggle():
+    # The bug: explicit Shell Access (allow_bash=true) was overridden by
+    # auto-escalation, so bash never reached the agent. It must NOT be disabled.
+    disabled = auto_escalation_disabled_tools(allow_bash=True)
+    assert "bash" not in disabled
+    assert "python" not in disabled
+    assert "read_file" not in disabled and "write_file" not in disabled
+    # the browser is still withheld (separate concern / no explicit toggle here)
+    assert "builtin_browser" in disabled
 
 
 def test_calendar_entry_request_promotes_to_agent():
