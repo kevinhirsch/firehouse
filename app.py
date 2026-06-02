@@ -501,6 +501,8 @@ app.include_router(setup_admin_wipe_routes(session_manager))
 # Memory
 from routes.memory_routes import setup_memory_routes
 app.include_router(setup_memory_routes(memory_manager, session_manager, memory_vector=memory_vector))
+from routes.entity_routes import setup_entity_routes
+app.include_router(setup_entity_routes())
 from routes.skills_routes import setup_skills_routes
 app.include_router(setup_skills_routes(skills_manager))
 
