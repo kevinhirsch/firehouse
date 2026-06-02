@@ -37,6 +37,7 @@ services:
       - OLLAMA_KEEP_ALIVE=-1        # keep the model resident (no multi-minute cold reloads)
       - OLLAMA_MAX_LOADED_MODELS=1  # never hold two big models in RAM at once (OOM guard)
       - OLLAMA_NUM_PARALLEL=1       # one sequence at a time (extra slots multiply KV-cache RAM)
+      - OLLAMA_LOAD_TIMEOUT=15m     # allow a big model to finish loading on CPU (default is only 5m)
 YAML
 echo "==> Wrote $TUNING_OVERLAY"
 
