@@ -25,7 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 # Trigger verdicts.
 FIRE = "fire"
@@ -128,6 +128,49 @@ def snapshot_digest(signals: Any) -> str:
 def should_resynthesize(prev_digest: Optional[str], new_digest: str) -> bool:
     """Re-run (expensive) snapshot synthesis only when the inputs changed."""
     return prev_digest != new_digest
+
+
+# Outcome-driven tuning (Phase 5) --------------------------------------------
+# A trigger carries a Beta(alpha, beta) belief that it's worth firing, seeded at
+# the uniform prior (1, 1) on the model. Each notification outcome folds in.
+
+_OUTCOME_WEIGHTS = {
+    "useful": (1.0, 0.0),     # corroborates: worth firing
+    "acted": (2.0, 0.0),      # strong positive — the user acted on it
+    "dismissed": (0.0, 1.0),  # contradicts: noise
+}
+
+
+def update_belief(alpha: float, beta: float, outcome: str) -> Tuple[float, float]:
+    """Fold a notification outcome into a trigger's Beta(alpha, beta) belief.
+
+    Unknown outcomes are a no-op, so free-form values pass through harmlessly.
+    """
+    da, db = _OUTCOME_WEIGHTS.get((outcome or "").strip().lower(), (0.0, 0.0))
+    return alpha + da, beta + db
+
+
+def usefulness(alpha: float, beta: float) -> float:
+    """Mean of the trigger's Beta belief = P(useful)."""
+    total = alpha + beta
+    if total <= 0:
+        return 0.0
+    return max(0.0, min(1.0, alpha / total))
+
+
+def is_noisy(alpha: float, beta: float, min_samples: float = 4.0,
+             min_usefulness: float = 0.34) -> bool:
+    """Whether a trigger has earned enough negative feedback to auto-pause.
+
+    Needs at least ``min_samples`` observations beyond the Beta(1,1) prior
+    before judging, then flags it once usefulness drops below ``min_usefulness``
+    — so a single dismissal never pauses a trigger, but a persistently ignored
+    one stops nagging.
+    """
+    observations = (alpha - 1.0) + (beta - 1.0)
+    if observations < min_samples:
+        return False
+    return usefulness(alpha, beta) < min_usefulness
 
 
 def decide_tick(

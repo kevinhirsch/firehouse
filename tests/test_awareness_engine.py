@@ -139,3 +139,33 @@ def test_decide_needs_llm_skipped_without_judge_used_with_judge():
     fired = e.decide_tick(trigs, {}, _NOW, 0, 0, judge=lambda t, s: True)
     assert [t["id"] for t in fired] == ["fuzzy"]
     assert e.decide_tick(trigs, {}, _NOW, 0, 0, judge=lambda t, s: False) == []
+
+
+# ---- outcome-driven tuning (Phase 5) ---------------------------------------
+
+def test_update_belief_directions():
+    assert e.update_belief(1.0, 1.0, "useful") == (2.0, 1.0)
+    assert e.update_belief(1.0, 1.0, "acted") == (3.0, 1.0)
+    assert e.update_belief(1.0, 1.0, "dismissed") == (1.0, 2.0)
+    assert e.update_belief(2.0, 3.0, "unknown") == (2.0, 3.0)   # no-op
+
+
+def test_usefulness():
+    assert e.usefulness(1.0, 1.0) == 0.5
+    assert e.usefulness(0.0, 0.0) == 0.0
+    assert e.usefulness(9.0, 1.0) == 0.9
+
+
+def test_is_noisy_needs_evidence_then_flags():
+    # one dismissal isn't enough to judge
+    assert e.is_noisy(1.0, 2.0) is False
+    # many dismissals -> low usefulness -> noisy
+    a, b = 1.0, 1.0
+    for _ in range(6):
+        a, b = e.update_belief(a, b, "dismissed")
+    assert e.is_noisy(a, b) is True
+    # consistently useful -> never noisy
+    a, b = 1.0, 1.0
+    for _ in range(6):
+        a, b = e.update_belief(a, b, "useful")
+    assert e.is_noisy(a, b) is False
