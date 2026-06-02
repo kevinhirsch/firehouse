@@ -203,7 +203,9 @@ Ordered by dependency and risk. Each phase is independently shippable (small, fo
 
 ## Decisions (review feedback)
 1. **Notification channel default — DECIDED: ntfy** (bundled), user-configurable per trigger.
-2. **Awareness LLM cost — IN DISCUSSION.** Default cost-control stack: **utility model only**, **change-detection cache** (skip LLM when inputs are unchanged), **opt-in gating** (only users with `can_use_awareness` and ≥1 enabled trigger), **rule-first triggers** (LLM only for fuzzy ones), and **active-window gating** (no off-hours polling). Optional **per-user daily token budget** with rule-only fallback when exceeded. Interval + budget cap to be confirmed.
+2. **Awareness LLM cost — DECIDED.** Cost-control stack: **utility model only**, **change-detection cache** (skip LLM when inputs are unchanged), **opt-in gating** (only users with `can_use_awareness` and ≥1 enabled trigger), **rule-first triggers** (LLM only for fuzzy ones), and **active-window gating** (no off-hours polling).
+   - **Interval:** exposed as a per-user **Settings** option, **default 15 min**.
+   - **Token budget:** the per-user daily budget mechanism is **built but unlimited by default** (admins opt in to a ceiling); when a ceiling is set and exceeded, the loop falls back to rule-only triggers for the rest of the day and logs it.
 3. **Entity backfill — DECIDED: start clean.** No auto-promotion of existing flat memories; an optional admin-triggered backfill may be added later.
 4. **Home Assistant transport — DECIDED: REST first, then WebSocket.** Ship REST in Phase 4; add the WebSocket state stream (real-time triggers) in Phase 5. Design the HA service so the transport is swappable behind the port.
 5. **Multi-user — DECIDED: adhere to Firehouse.** All features are per-user and owner-scoped (not global/single-user), consistent with the rest of the app.
