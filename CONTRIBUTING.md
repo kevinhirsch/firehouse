@@ -9,6 +9,13 @@ Thanks for helping. The project is moving quickly, so the best contributions are
 - Avoid broad rewrites, formatting-only changes, or moving many files unless the issue is specifically about structure.
 - If you want to work on a large feature, open an issue first and describe the approach.
 
+## Understanding the codebase
+
+New to the project? Start with [docs/architecture.md](docs/architecture.md) for
+how the app is wired (entry point, routers, subsystems, storage, auth), and
+[docs/api.md](docs/api.md) for the HTTP surface. The full
+[documentation index](docs/README.md) links everything.
+
 ## Setup
 
 Docker is the recommended path for normal testing:

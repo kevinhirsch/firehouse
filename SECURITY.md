@@ -9,7 +9,8 @@ Security fixes are handled on the default branch until formal releases are cut.
 ## Deployment Guidance
 
 - Keep `AUTH_ENABLED=true`.
-- Use HTTPS when exposing the app beyond localhost.
+- Use HTTPS when exposing the app beyond localhost — see
+  [Deployment → Putting it behind HTTPS](docs/deployment.md#putting-it-behind-https).
 - Put the app behind a trusted reverse proxy or private network.
 - Protect `.env`, `data/`, logs, uploaded files, generated media, and database files.
 - Disable open signup unless you intentionally want new accounts.
