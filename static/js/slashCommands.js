@@ -2211,7 +2211,7 @@ async function _cmdDemo(args, ctx) {
   }
 
   _clearTour();
-  await typewriterReply('Firehouse is yours to explore, enjoy the voyage!');
+  await typewriterReply('Firehouse is yours to explore — Smokey is always on call!');
   return true;
 }
 
@@ -5527,7 +5527,7 @@ const COMMANDS = {
   mode: {
     alias: [],
     category: 'Settings',
-    help: 'Switch agent/chat mode',
+    help: 'Switch agent/Smokey mode',
     handler: _cmdMode,
     usage: '/mode agent|chat'
   },
