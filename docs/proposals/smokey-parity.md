@@ -201,12 +201,12 @@ Ordered by dependency and risk. Each phase is independently shippable (small, fo
 
 ---
 
-## Open questions for review
-1. **Notification channel default** — ntfy (already bundled) vs. browser push vs. email for proactive nudges? (Proposing ntfy default, user-configurable.)
-2. **Awareness LLM cost** — snapshot synthesis every 15 min per active user uses tokens. Cap to active users / longer interval / utility-model only? (Proposing utility model + cache + only for users with `can_use_awareness` and ≥1 enabled trigger.)
-3. **Entity backfill** — auto-promote existing memories to entities, or start clean? (Proposing start clean; optional admin backfill.)
-4. **Home Assistant transport** — REST (simpler) vs. WebSocket (real-time state for triggers)? (Proposing REST first, WS in Phase 5 if needed.)
-5. **Multi-user reality** — Firehouse is multi-user; Smokey is single-user (Kevin). Confirm these should be per-user features (they're designed that way here), not global.
+## Decisions (review feedback)
+1. **Notification channel default — DECIDED: ntfy** (bundled), user-configurable per trigger.
+2. **Awareness LLM cost — IN DISCUSSION.** Default cost-control stack: **utility model only**, **change-detection cache** (skip LLM when inputs are unchanged), **opt-in gating** (only users with `can_use_awareness` and ≥1 enabled trigger), **rule-first triggers** (LLM only for fuzzy ones), and **active-window gating** (no off-hours polling). Optional **per-user daily token budget** with rule-only fallback when exceeded. Interval + budget cap to be confirmed.
+3. **Entity backfill — DECIDED: start clean.** No auto-promotion of existing flat memories; an optional admin-triggered backfill may be added later.
+4. **Home Assistant transport — DECIDED: REST first, then WebSocket.** Ship REST in Phase 4; add the WebSocket state stream (real-time triggers) in Phase 5. Design the HA service so the transport is swappable behind the port.
+5. **Multi-user — DECIDED: adhere to Firehouse.** All features are per-user and owner-scoped (not global/single-user), consistent with the rest of the app.
 
 ## Non-goals
 - No microservices split, NATS, Qdrant, or separate observability stack — Firehouse stays a monolith with ChromaDB + SQLite.
