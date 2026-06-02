@@ -1,74 +1,61 @@
 """Phase 0: proactive-feature tables create cleanly and are owner-scopable.
 
-Skips when SQLAlchemy isn't really installed (the test conftest stubs it with
-a MagicMock; building declarative models against the stub is meaningless), so
-this runs in dev/CI where the real dependency is present.
+Runs in an isolated subprocess (fresh interpreter) so the *real* SQLAlchemy
+declarative models are built — the shared pytest session has sibling tests that
+stub ``core.database`` in ``sys.modules``, which would corrupt ``Base`` here.
+Skips when SQLAlchemy / app deps aren't installed.
 """
 
-import importlib.util
-import uuid
+import os
+import subprocess
+import sys
 
 import pytest
 
-if importlib.util.find_spec("sqlalchemy") is None:
-    pytest.skip("sqlalchemy not installed", allow_module_level=True)
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+_SCRIPT = r"""
+import sys, uuid
+try:
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from core.database import Base
+    import core.proactive_models as pm
+except ModuleNotFoundError as ex:
+    print("SKIP", ex); sys.exit(0)
 
-from core.database import Base
-import core.proactive_models as pm  # noqa: F401  (registers the tables on Base)
+engine = create_engine("sqlite:///:memory:")
+Base.metadata.create_all(bind=engine)
+s = sessionmaker(bind=engine)()
 
+e = pm.Entity(id=str(uuid.uuid4()), owner="alice", type="person", name="Ryne")
+s.add(e); s.flush()
+s.add(pm.EntityFact(id=str(uuid.uuid4()), owner="alice", entity_id=e.id,
+                    text="Ryne is Alice's boyfriend", category="relationship"))
+s.commit()
 
-@pytest.fixture()
-def db():
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(bind=engine)
-    Session = sessionmaker(bind=engine)
-    s = Session()
-    try:
-        yield s
-    finally:
-        s.close()
+f = s.query(pm.EntityFact).one()
+assert f.alpha == 1.0 and f.beta == 1.0 and f.confidence == 0.5 and f.uses == 0
 
+# owner isolation
+s.add(pm.Entity(id=str(uuid.uuid4()), owner="bob", type="person", name="Sam"))
+s.commit()
+assert [r.name for r in s.query(pm.Entity).filter(pm.Entity.owner == "alice").all()] == ["Ryne"]
+assert [r.name for r in s.query(pm.Entity).filter(pm.Entity.owner == "bob").all()] == ["Sam"]
 
-def _mk_entity(owner, name):
-    return pm.Entity(id=str(uuid.uuid4()), owner=owner, type="person", name=name)
-
-
-def test_entity_and_fact_roundtrip_with_defaults(db):
-    e = _mk_entity("alice", "Ryne")
-    db.add(e)
-    db.flush()
-    fact = pm.EntityFact(id=str(uuid.uuid4()), owner="alice", entity_id=e.id,
-                         text="Ryne is Alice's boyfriend", category="relationship")
-    db.add(fact)
-    db.commit()
-
-    got = db.query(pm.EntityFact).one()
-    assert got.entity_id == e.id
-    # Beta-confidence defaults present.
-    assert got.alpha == 1.0 and got.beta == 1.0
-    assert got.confidence == 0.5
-    assert got.uses == 0
+# awareness trigger defaults
+s.add(pm.AwarenessTrigger(id=str(uuid.uuid4()), owner="alice", name="Pre-event nudge"))
+s.commit()
+t = s.query(pm.AwarenessTrigger).one()
+assert t.channel == "ntfy" and t.enabled is True and t.risk_tier == "low" and t.cooldown_seconds == 0
+print("OK")
+"""
 
 
-def test_owner_scoped_query_isolation(db):
-    db.add_all([_mk_entity("alice", "Ryne"), _mk_entity("bob", "Sam")])
-    db.commit()
-
-    alice_rows = db.query(pm.Entity).filter(pm.Entity.owner == "alice").all()
-    assert [r.name for r in alice_rows] == ["Ryne"]
-    bob_rows = db.query(pm.Entity).filter(pm.Entity.owner == "bob").all()
-    assert [r.name for r in bob_rows] == ["Sam"]
-
-
-def test_awareness_trigger_defaults(db):
-    t = pm.AwarenessTrigger(id=str(uuid.uuid4()), owner="alice", name="Pre-event nudge")
-    db.add(t)
-    db.commit()
-    got = db.query(pm.AwarenessTrigger).one()
-    assert got.channel == "ntfy"
-    assert got.enabled is True
-    assert got.risk_tier == "low"
-    assert got.cooldown_seconds == 0
+def test_schema_and_owner_scope():
+    p = subprocess.run([sys.executable, "-c", _SCRIPT], cwd=_ROOT,
+                       capture_output=True, text=True)
+    if "SKIP" in p.stdout:
+        pytest.skip("deps not installed: " + p.stdout.strip())
+    assert p.returncode == 0, (p.stdout + p.stderr)
+    assert "OK" in p.stdout, (p.stdout + p.stderr)
