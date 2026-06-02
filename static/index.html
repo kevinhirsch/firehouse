@@ -430,6 +430,47 @@
     </div>
   </div>
 
+  <!-- Awareness Modal (proactive triggers + notification feed) -->
+  <div id="awareness-modal" class="modal hidden">
+    <div class="modal-content" style="background:var(--bg);max-width:720px;width:92vw">
+      <div class="modal-header">
+        <h4>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px;opacity:0.7">
+            <path d="M4.93 19.07a10 10 0 0 1 0-14.14"/><path d="M7.76 16.24a6 6 0 0 1 0-8.49"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><circle cx="12" cy="12" r="1.5"/>
+          </svg>Awareness
+        </h4>
+        <button class="close-btn" id="close-awareness-modal" aria-label="Close awareness modal">✖</button>
+      </div>
+      <div class="modal-body" style="padding:14px 16px">
+        <div class="memory-tabs" style="display:flex;gap:6px;margin-bottom:12px">
+          <button class="memory-tab active" data-awareness-tab="triggers">Triggers</button>
+          <button class="memory-tab" data-awareness-tab="feed">Feed</button>
+        </div>
+
+        <div class="awareness-tab-panel" data-awareness-panel="triggers">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
+            <div style="flex:1;min-width:160px">
+              <label style="font-size:11px;opacity:0.6;display:block;margin-bottom:3px">Name</label>
+              <input type="text" id="awareness-new-name" placeholder="Pre-event nudge" style="width:100%">
+            </div>
+            <div style="flex:1;min-width:200px">
+              <label style="font-size:11px;opacity:0.6;display:block;margin-bottom:3px">When (minutes before next event)</label>
+              <input type="number" id="awareness-new-minutes" placeholder="30" min="1" style="width:100%">
+            </div>
+            <button id="awareness-add-btn" class="primary-btn" style="white-space:nowrap">+ Add trigger</button>
+          </div>
+          <div id="awareness-triggers-list" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div id="awareness-triggers-empty" style="opacity:0.5;font-size:13px;text-align:center;padding:24px 0">No triggers yet. Add one above.</div>
+        </div>
+
+        <div class="awareness-tab-panel hidden" data-awareness-panel="feed">
+          <div id="awareness-feed-list" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div id="awareness-feed-empty" style="opacity:0.5;font-size:13px;text-align:center;padding:24px 0">No notifications yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Theme Popup (floating panel) -->
   <div id="theme-modal" class="modal hidden">
   <div id="theme-popup" class="modal-content admin-modal-content" style="background:var(--bg)">
@@ -892,6 +933,19 @@
           </svg>
           <span class="grow">Tasks</span>
           <span id="assistant-notif-dot" class="sidebar-notif-dot" style="display:none"></span>
+        </div>
+        <div class="list-item" id="tool-awareness-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            style="flex-shrink:0;opacity:0.5;">
+            <path d="M4.93 19.07a10 10 0 0 1 0-14.14"/>
+            <path d="M7.76 16.24a6 6 0 0 1 0-8.49"/>
+            <path d="M16.24 7.76a6 6 0 0 1 0 8.49"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            <circle cx="12" cy="12" r="1.5"/>
+          </svg>
+          <span class="grow">Awareness</span>
+          <span id="awareness-notif-dot" class="sidebar-notif-dot" style="display:none"></span>
         </div>
 
         <div class="list-item" id="tool-theme-btn">
