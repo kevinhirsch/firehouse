@@ -3,9 +3,12 @@
 
 Backs up everything the app keeps under `data/`: the SQLite DB, the
 Fernet key, JSON state files, RAG indexes, personal docs, attachments,
-WhatsApp session, etc. Output is a gzip tarball — composable with cron
-+ scp + s3cmd. The backup uses `sqlite3 .backup` for the DB so the
-app can keep running during the snapshot.
+WhatsApp session, etc. Re-downloadable model caches (data/huggingface/,
+data/fastembed_cache/) are skipped by default — they're often many GB and
+the app re-fetches them on demand (override with --include-model-cache).
+Output is a gzip tarball — composable with cron + scp + s3cmd. The backup
+uses `sqlite3 .backup` for the DB so the app can keep running during the
+snapshot.
 
     firehouse-backup snapshot                       # → backups/YYYY-MM-DD-HHMMSS.tar.gz
     firehouse-backup snapshot --out /mnt/nas/x.tgz
@@ -38,6 +41,12 @@ _SKIP_PATTERNS = {
     "deep_research",        # research runs are large; back up explicitly via --include-research
     "personal_uploads",     # uploaded files; usually wanted, included by default actually
 }
+
+# Re-downloadable model/embedding caches under data/. These are pure caches
+# (often many GB) that the app re-fetches on demand, so they're skipped by
+# default — including them only bloats the tarball. Override with
+# --include-model-cache.
+_MODEL_CACHE_DIRS = ("huggingface", "fastembed_cache")
 
 
 def _sqlite_safe_copy(src: Path, dst: Path) -> None:
@@ -95,6 +104,8 @@ def cmd_snapshot(args):
                     continue
                 if not args.include_attachments and "mail-attachments" in rel.parts:
                     continue
+                if not args.include_model_cache and any(d in rel.parts for d in _MODEL_CACHE_DIRS):
+                    continue
                 # Substitute SQLite snapshots for the live files
                 source = db_map.get(p, p)
                 tar.add(source, arcname=str(rel))
@@ -113,6 +124,7 @@ def cmd_snapshot(args):
         "ratio": round(out_path.stat().st_size / max(total_bytes, 1), 4),
         "included_research": bool(args.include_research),
         "included_attachments": bool(args.include_attachments),
+        "included_model_cache": bool(args.include_model_cache),
     }, args)
 
 
@@ -225,6 +237,9 @@ def _build_parser():
                     help="include data/deep_research/ (skipped by default; large)")
     ps.add_argument("--include-attachments", action="store_true",
                     help="include data/mail-attachments/ (skipped by default; re-derivable)")
+    ps.add_argument("--include-model-cache", action="store_true",
+                    help="include data/huggingface/ + data/fastembed_cache/ "
+                         "(skipped by default; re-downloadable model caches, often many GB)")
     ps.set_defaults(func=cmd_snapshot)
 
     pl = sub.add_parser("list", parents=[common])
