@@ -74,3 +74,25 @@ def message_needs_tools(text: str, patterns: Iterable[Pattern[str]] = _TOOL_INTE
     if not text:
         return False
     return any(pattern.search(text) for pattern in patterns)
+
+
+# Heavy "do things on the computer" tools withheld on a light chat→agent
+# auto-escalation. The code-execution subset is what Shell Access (allow_bash)
+# governs.
+_AUTO_ESCALATION_HEAVY_TOOLS = frozenset({"bash", "python", "read_file", "write_file", "builtin_browser"})
+_SHELL_TOOLS = frozenset({"bash", "python", "read_file", "write_file"})
+
+
+def auto_escalation_disabled_tools(allow_bash: bool) -> set:
+    """Tools to withhold when a plain-chat message auto-escalates to agent mode.
+
+    A light promotion (e.g. a notes/calendar intent) shouldn't let the model
+    "shell out" for a request that never needed it, so the heavy tools are
+    withheld. But when the user has explicitly enabled Shell Access
+    (``allow_bash``), respect it: keep the code-execution tools and withhold
+    only the browser. Without this, the explicit toggle was silently overridden
+    by auto-escalation — the agent never saw ``bash`` and couldn't run shell.
+    """
+    if allow_bash:
+        return set(_AUTO_ESCALATION_HEAVY_TOOLS - _SHELL_TOOLS)
+    return set(_AUTO_ESCALATION_HEAVY_TOOLS)

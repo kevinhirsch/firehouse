@@ -36,6 +36,7 @@ from routes.chat_helpers import (
     _enforce_chat_privileges,
 )
 from src.action_intents import message_needs_tools as _message_needs_tools
+from src.action_intents import auto_escalation_disabled_tools as _auto_escalation_disabled_tools
 
 logger = logging.getLogger(__name__)
 
@@ -431,11 +432,13 @@ def setup_chat_routes(
         # notes/calendar/email intent. Grant the relevant managers but withhold
         # the heavy "do things on the computer" tools — otherwise the model
         # tries to shell out for a request that never needed it, then fails
-        # (and looks broken when the shell is disabled).
+        # (and looks broken when the shell is disabled). EXCEPTION: if the user
+        # explicitly turned on Shell Access (allow_bash), respect it — the
+        # toggle must not be silently overridden by auto-escalation.
         if auto_escalated:
-            disabled_tools.update({
-                "bash", "python", "read_file", "write_file", "builtin_browser",
-            })
+            disabled_tools.update(
+                _auto_escalation_disabled_tools(str(allow_bash).lower() == "true")
+            )
 
         # Disable document tools in compare sessions — they break the pane UI
         if sess.name and sess.name.startswith("[CMP]"):
